@@ -86,7 +86,7 @@ for directory in os.listdir(input_eval_dir):
   command = command + " -i " + matches_dir + "/sfm_data.json"
   command = command + " -m " + matches_dir
   command = command + " -o " + outGlobal_dir
-  command = command + " -f 0" # Do not refine intrinsics
+  command = command + " -f NONE" # Do not refine intrinsics
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
