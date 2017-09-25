@@ -76,7 +76,7 @@ for directory in os.listdir(input_eval_dir):
   print (". compute matches")
   command = OPENMVG_SFM_BIN + "/openMVG_main_ComputeMatches"
   command = command + " -i " + matches_dir + "/sfm_data.json"
-  command = command + " -o " + matches_dir + " -r .8 -g e"
+  command = command + " -o " + matches_dir + " -r .8 -g e -n ANNL2 -f 1"
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
@@ -95,7 +95,7 @@ for directory in os.listdir(input_eval_dir):
   outStatistics_dir = os.path.join(outGlobal_dir, "stats")
   command = OPENMVG_SFM_BIN + "/openMVG_main_evalQuality"
   command = command + " -i " + gt_camera_dir
-  command = command + " -c " + outGlobal_dir + "/sfm_data.json"
+  command = command + " -c " + outGlobal_dir + "/sfm_data.bin"
   command = command + " -o " + outStatistics_dir
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
