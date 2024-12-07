@@ -19,7 +19,6 @@
 #
 # 
 
-import commands
 import os
 import subprocess
 import sys
@@ -30,13 +29,13 @@ def ensure_dir(f):
         os.makedirs(d)
 
 if len(sys.argv) < 4:
-  print ("/!\ Invalid input")
+  print ("Invalid input")
   print ("Usage %s OPENMVG_BIN_DIR ./GT_DATASET ./GT_DATASET_out" % sys.argv[0])
   sys.exit(1)
 
 OPENMVG_SFM_BIN = sys.argv[1]
 if not (os.path.exists(OPENMVG_SFM_BIN)):
-  print("/!\ Please use a valid OPENMVG_SFM_BIN directory.")
+  print("Please use a valid OPENMVG_SFM_BIN directory.")
   sys.exit(1)
 
 input_eval_dir = sys.argv[2]
@@ -48,15 +47,14 @@ output_eval_dir = os.path.join(sys.argv[3], "evaluation_output")
 #  . compute matches
 #  . compute camera motion
 #  . perform quality evaluation regarding ground truth camera trajectory
-
 for directory in os.listdir(input_eval_dir):
 
-  print directory
+  print(directory)
   matches_dir = os.path.join(output_eval_dir, directory, "matching")
 
   ensure_dir(matches_dir)
 
-  print (". intrinsic setup")
+  print(". intrinsic setup")
   command = OPENMVG_SFM_BIN + "/openMVG_main_SfMInit_ImageListing"
   command = command + " -i " + input_eval_dir + "/" + directory + "/images/"
   command = command + " -o " + matches_dir
@@ -66,32 +64,49 @@ for directory in os.listdir(input_eval_dir):
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
-  print (". compute features")
+  print(". compute features")
   command = OPENMVG_SFM_BIN + "/openMVG_main_ComputeFeatures"
   command = command + " -i " + matches_dir + "/sfm_data.json"
   command = command + " -o " + matches_dir
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
-  print (". compute matches")
-  command = OPENMVG_SFM_BIN + "/openMVG_main_ComputeMatches"
+  print(". compute pairs")
+  command = OPENMVG_SFM_BIN + "/openMVG_main_PairGenerator"
   command = command + " -i " + matches_dir + "/sfm_data.json"
-  command = command + " -o " + matches_dir + " -r .8 -g e -n ANNL2 -f 1"
+  command = command + " -o " + matches_dir + "/pairs.bin"
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
-  print (". compute camera motion")
-  outGlobal_dir = os.path.join(output_eval_dir, directory, "SfM_Global")
-  command = OPENMVG_SFM_BIN + "/openMVG_main_GlobalSfM"
+  print(". compute matches")
+  command = OPENMVG_SFM_BIN + "/openMVG_main_ComputeMatches"
+  command = command + " -i " + matches_dir + "/sfm_data.json"
+  command = command + " -p " + matches_dir + "/pairs.bin"
+  command = command + " -o " + matches_dir + "/matches.putative.bin -n AUTO"
+  proc = subprocess.Popen((str(command)), shell=True)
+  proc.wait()
+
+  print(". filter matches")
+  command = OPENMVG_SFM_BIN + "/openMVG_main_GeometricFilter"
+  command = command + " -i " + matches_dir + "/sfm_data.json"
+  command = command + " -m " + matches_dir + "/matches.putative.bin"
+  command = command + " -o " + matches_dir + "/matches.e.bin"
+  proc = subprocess.Popen((str(command)), shell=True)
+  proc.wait()
+
+  print(". compute camera motion")
+  outGlobal_dir = os.path.join(output_eval_dir, directory, "SfM")
+  command = OPENMVG_SFM_BIN + "/openMVG_main_SfM"
   command = command + " -i " + matches_dir + "/sfm_data.json"
   command = command + " -m " + matches_dir
   command = command + " -o " + outGlobal_dir
-  command = command + " -f NONE" # Do not refine intrinsics
+  command = command + " -M " + matches_dir + "/matches.e.bin"
+  command = command + " -f NONE -s GLOBAL" # Do not refine intrinsics & udr global sfm
   proc = subprocess.Popen((str(command)), shell=True)
   proc.wait()
 
-  print (". perform quality evaluation")
-  gt_camera_dir = os.path.join(input_eval_dir, directory, "gt_dense_cameras")
+  print(". perform quality evaluation")
+  gt_camera_dir = os.path.join(input_eval_dir, directory)
   outStatistics_dir = os.path.join(outGlobal_dir, "stats")
   command = OPENMVG_SFM_BIN + "/openMVG_main_evalQuality"
   command = command + " -i " + gt_camera_dir
@@ -101,4 +116,3 @@ for directory in os.listdir(input_eval_dir):
   proc.wait()
 
 sys.exit(1)
-
